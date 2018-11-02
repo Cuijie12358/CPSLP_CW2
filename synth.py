@@ -42,6 +42,7 @@ r2 = re.compile(r'([a-z]+_?-_?[a-z]+)')
 
 
 def check_date_struct(date_string):
+    # Settings
     match_date = []
     date_pattern = re.compile(r'(\d+)/(\d+)/?(\d*)')
     match = date_pattern.match(date_string)
@@ -63,15 +64,24 @@ def check_date_struct(date_string):
     if match:
         month = int(match.group(2))
         day = int(match.group(1))
-        year = int(match.group(3))
-        if year < 100:
-            whole_year = year+1900
+        try:
+            year = int(match.group(3))
+        except ValueError:
+            year = None
+
+        # find how many days in February
+        if year:
+            if year < 100:
+                whole_year = year+1900
+            else:
+                whole_year = year
+
+            if (whole_year % 4 == 0 and whole_year % 100 != 0) or (whole_year % 400 == 0):
+                list_day_num[month-1] = 29
         else:
-            whole_year = year
+            list_day_num[month - 1] = 29
 
-        if (whole_year % 4 == 0 and whole_year % 100 != 0) or (whole_year % 400 == 0):
-            list_day_num[month-1] = 29
-
+        # Choose the words
         if month:
             if month<0 or month>12:
                 raise ValueError("MM should range from 1 to 12")
@@ -109,7 +119,6 @@ def check_date_struct(date_string):
                 else:
                     match_year_2 = dic_year[year]
                     match_date.append(match_year_2)
-
 
             elif len(match.group(3))==4:
                 if year<0 or year>9999:
@@ -187,7 +196,7 @@ class Utterance:
             list_phone_element.extend(origin_list[i]*2)
         return list_phone_element
 
-    # Get the pronounce order
+    # Get the spelling order
     def get_phone_spellseq(self):
         self.regexp_tokenize_char()
         phone_list = []
@@ -209,10 +218,12 @@ class Utterance:
         # print(phone_list)
         return phone_list
 
+    # Get the words order
     def get_phone_seq(self):
         list_phone_element =[]
         self.tokens.extend(nltk.word_tokenize(self.phrase))
         tokens_date = self.tokens[:]
+        # Add the date
         for i in range(len(self.tokens)):
             match_date = check_date_struct(self.tokens[i])
             if match_date:
@@ -221,6 +232,8 @@ class Utterance:
                     tokens_date.insert(i,j)
         self.tokens = tokens_date
         tokens_2 = self.tokens[:]
+
+        # Remove the non-word part
         for i in self.tokens:
             word_pattern = re.compile(r'([A-Za-z]+)')
             word_capture = word_pattern.match(i)
@@ -228,6 +241,8 @@ class Utterance:
                 tokens_2.pop(tokens_2.index(i))
         self.tokens = tokens_2
         phone_list = []
+
+        # Form the seq
         for i in self.tokens:
             try:
                 list_cmudic = cmudict.dict()[i.lower()][0]
@@ -239,21 +254,11 @@ class Utterance:
         # print(list_phone_element)
         list_phone_element.insert(0,"pau")
         list_phone_element.append("pau")
-
         list2 = np.reshape(list_phone_element,(int(len(list_phone_element)/2),2))
         for i in list2:
             phone_list.append(i[0]+'-'+i[1])
         # print(phone_list)
         return phone_list
-
-
-
-
-
-
-
-
-
 
 # soomth the diphone
 def get_soomth(phone_data):
@@ -263,6 +268,12 @@ def get_soomth(phone_data):
     phone_data[:num] = np.multiply(phone_data[:num], fade_1)
     phone_data[len(phone_data) - num:] = np.multiply(phone_data[len(phone_data) - num:], fade_2)
     return phone_data
+
+
+
+
+
+
 
 if __name__ == "__main__":
 
