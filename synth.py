@@ -274,7 +274,8 @@ class Utterance:
         # print(phone_list)
         return phone_list
 
-# soomth the diphone
+
+#---------------soomth the diphone----------------
 def get_soomth(phone_data):
     num = int(out.rate * 0.01)
     fade_1 = np.arange(0, 1, 1 / num)
