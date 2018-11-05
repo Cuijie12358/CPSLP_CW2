@@ -2,6 +2,31 @@
 #
 # Extensions: A C E F(yyyy from 0000 to 9999, YY from 00 to 99)
 #
+# Used the pause.
+#
+# Tips:
+# 1. When the word is not in cmudict it print "This word is not included in the cmudict."
+#
+# 2. When the character(a-z) is not in cmudict it print "This character is not included in the cmudict."
+# (which is not possible I think)
+#
+# 3. Some phone in word like "world" don't have the entire phone and I just pass this.
+# (Which sounds ok.)
+#
+# 4. When the date structure is wrong it print
+#  "YYYY should range from 0000 to 9999"
+#  "Choose YYYY or YY to type in."
+#  "MM should range from 1 to 12"
+#  "DD should range from 1 to 31"
+#
+# 5. if someone types float numbers for the date structure, that won't be recognized as a date structure.
+#
+# 6. "YY0Y" speaks as "YY o Y"
+#
+# 7. "YY00" speaks as "YY hundred"
+#
+# 8. if that day doesn't exist for example 29/02/2001, print "This day doesn't exist."
+#
 ###############---------------------------------#################
 import os
 import simpleaudio
@@ -34,13 +59,17 @@ parser.add_argument('--volume', '-v', default=None, type=int,
 
 
 args = parser.parse_args()
-
 print(args.diphones)
 
+#---------r1 for filtering cmudict and r2 for filtering file name---------
 r1 = re.compile(r'([a-z]+)[0-9]?')
 r2 = re.compile(r'([a-z]+_?-_?[a-z]+)')
 
-
+#---------Check for DD/MM or DD/MM/YY or DD/MM/YYYY---------
+# Check how many days in February in that year
+# Check if the MM exists in a year
+# Check if the DD exists in that month
+# Check how to speak YY or YYYY
 def check_date_struct(date_string):
     # Settings
     match_date = []
@@ -59,7 +88,7 @@ def check_date_struct(date_string):
                 6:'six',7:'seven',8:'eight',9:'nine',10:'ten',
                 11:'eleven',12:'twelve',13:'thirteen',14:'fourteen',15:'fifteen',
                16:'sixteen',17:'seventeen',18:'eighteen',19:'nineteen',20:'twenty',
-               30:'thirty',40:'fourty',50:'fifty',60:'sixty',70:'seventy',80:'eighty',90:'ninety'}
+               30:'thirty',40:'fourty',50:'fifty',60:'sixty',70:'seventy',80:'eighty',90:'ninety',100:'hundred'}
 
     if match:
         month = int(match.group(2))
@@ -69,17 +98,20 @@ def check_date_struct(date_string):
         except ValueError:
             year = None
 
-        # find how many days in February
-        if year:
-            if year < 100:
-                whole_year = year+1900
-            else:
-                whole_year = year
 
-            if (whole_year % 4 == 0 and whole_year % 100 != 0) or (whole_year % 400 == 0):
-                list_day_num[month-1] = 29
-        else:
-            list_day_num[month - 1] = 29
+        if year != None:
+            if year >= 0:
+                if year < 100:
+                    whole_year = year+1900
+                elif year <9999 and year>=1000:
+                    whole_year = year
+                else:
+                    raise ValueError("Choose YYYY or YY to type in.")
+
+                if (whole_year % 4 == 0 and whole_year % 100 != 0) or (whole_year % 400 == 0):
+                    list_day_num[1] = 29
+            else:
+                raise ValueError("YYYY should range from 0000 to 9999")
 
         # Choose the words
         if month:
@@ -104,47 +136,29 @@ def check_date_struct(date_string):
                 match_day = dic_day[day]
                 match_date.append(match_day)
 
-        if year:
-            if len(match.group(3))==2:
-                match_year_1 = dic_year[19]
-                match_date.append(match_year_1)
-                if year <0 or year > 99:
-                    raise ValueError("YY should range from 00 to 99")
-                if (year>20 and year%10 != 0) or year<10:
-                    (year_1,year_2) = divmod(year,10)
-                    match2_year_1 = dic_year[year_1*10]
-                    match2_year_2 = dic_year[year_2]
-                    match_date.append(match2_year_1)
-                    match_date.append(match2_year_2)
-                else:
-                    match_year_2 = dic_year[year]
-                    match_date.append(match_year_2)
-
-            elif len(match.group(3))==4:
-                if year<0 or year>9999:
-                    raise ValueError("YYYY should range from 0000 to 9999")
-                (year_1,year_2)=divmod(year,100)
-                if year_1>20 and year_1%10 != 0:
-                    (year_1_1, year_1_2)=divmod(year_1,10)
-                    match_year_1_1 = dic_year[year_1_1*10]
-                    match_year_1_2 = dic_year[year_1_2]
-                    match_date.append(match_year_1_1)
-                    match_date.append(match_year_1_2)
-                else:
-                    match_year_1 = dic_year[year_1]
-                    match_date.append(match_year_1)
-
-                if (year_2 > 20 and year_2 % 10 != 0) or year_2<10:
-                    (year_2_1, year_2_2) = divmod(year_2, 10)
-                    match_year_2_1 = dic_year[year_2_1*10]
-                    match_year_2_2 = dic_year[year_2_2]
-                    match_date.append(match_year_2_1)
-                    match_date.append(match_year_2_2)
-                else:
-                    match_year_2 = dic_year[year_2]
-                    match_date.append(match_year_2)
+        if year != None:
+            (year_1,year_2)=divmod(whole_year,100)
+            if year_1>20 and year_1%10 != 0:
+                (year_1_1, year_1_2)=divmod(year_1,10)
+                match_year_1_1 = dic_year[year_1_1*10]
+                match_year_1_2 = dic_year[year_1_2]
+                match_date.append(match_year_1_1)
+                match_date.append(match_year_1_2)
             else:
-                raise ValueError("Year can only be YYYY or YY")
+                match_year_1 = dic_year[year_1]
+                match_date.append(match_year_1)
+            if year_2 == 0:
+                match_date.append(dic_year[100])
+            elif (year_2 > 20 and year_2 % 10 != 0) or year_2<10:
+                (year_2_1, year_2_2) = divmod(year_2, 10)
+                match_year_2_1 = dic_year[year_2_1*10]
+                match_year_2_2 = dic_year[year_2_2]
+                match_date.append(match_year_2_1)
+                match_date.append(match_year_2_2)
+            else:
+                match_year_2 = dic_year[year_2]
+                match_date.append(match_year_2)
+
         return match_date
     return None
 
