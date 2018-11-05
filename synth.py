@@ -276,13 +276,30 @@ class Utterance:
 
 
 #---------------soomth the diphone----------------
-def get_soomth(phone_data):
+def get_smooth(phone_data_list):
     num = int(out.rate * 0.01)
     fade_1 = np.arange(0, 1, 1 / num)
     fade_2 = fade_1[::-1]
-    phone_data[:num] = np.multiply(phone_data[:num], fade_1)
-    phone_data[len(phone_data) - num:] = np.multiply(phone_data[len(phone_data) - num:], fade_2)
-    return phone_data
+    length = 0
+    for phone_data in phone_data_list:
+        phone_data[:num] = np.multiply(phone_data[:num], fade_1)
+        phone_data[len(phone_data) - num:] = np.multiply(phone_data[len(phone_data) - num:], fade_2)
+        length += len(phone_data)
+
+
+    length = length-(len(phone_data_list)-1)*num
+    repeat = len(phone_data_list)-1
+    array = np.zeros(length)
+    
+    # ocerlap and cross fading here
+    start = 0
+    for i in range(0, repeat + 1):
+        end = start + len(phone_data_list[i])
+        phone_data = phone_data_list[i]
+        array[start:end] = array[start:end] + phone_data
+        start = end - num
+    array = np.rint(array).astype(np.int16)
+    return array
 
 
 
@@ -307,19 +324,24 @@ if __name__ == "__main__":
 
         out = simpleaudio.Audio(rate=16000)
 
+        phone_data_list = []
+
+
         for i in phone_seq:
             try:
                 phone_data = diphone_synth.diphones[i]
-
-                if args.crossfade:
-                    phone_data = get_soomth(phone_data)
-                out.data = np.append(out.data, phone_data)
-                # print(len(out.data))
-
             # Combinations of sounds which are not included in the wav files provided will be ignored. For example: hh_hh
             except KeyError:
                 pass
-        # out.change_speed(1)
+
+            phone_data_list.append(phone_data)
+
+        if args.crossfade:
+            out.data = np.array(get_smooth(phone_data_list))
+        else:
+            for phone_data in phone_data_list:
+                out.data = np.append(out.data, phone_data)
+
 
         if args.volume:
             if not (args.volume>= 0 and args.volume<=100):
