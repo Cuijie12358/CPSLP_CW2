@@ -2,7 +2,7 @@
 #
 # Extensions: A C E F(yyyy from 0000 to 9999, YY from 00 to 99)
 #
-# Used the pause.
+# No pause in spelling.
 #
 # Tips:
 # 1. When the word is not in cmudict it print "This word is not included in the cmudict."
@@ -10,7 +10,7 @@
 # 2. When the character(a-z) is not in cmudict it print "This character is not included in the cmudict."
 # (which is not possible I think)
 #
-# 3. Some phone in word like "world" don't have the entire phone and I just pass this.
+# 3. Some phone in word like "world" don't have the entire phone (missing 'we-r' ) and I just pass this.
 # (Which sounds ok.)
 #
 # 4. When the date structure is wrong it print
@@ -290,7 +290,7 @@ def get_smooth(phone_data_list):
     length = length-(len(phone_data_list)-1)*num
     repeat = len(phone_data_list)-1
     array = np.zeros(length)
-    
+
     # ocerlap and cross fading here
     start = 0
     for i in range(0, repeat + 1):
@@ -332,6 +332,7 @@ if __name__ == "__main__":
                 phone_data = diphone_synth.diphones[i]
             # Combinations of sounds which are not included in the wav files provided will be ignored. For example: hh_hh
             except KeyError:
+                print("missing the phone of {}".format(i))
                 pass
 
             phone_data_list.append(phone_data)
